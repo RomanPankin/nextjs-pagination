@@ -15,8 +15,8 @@ const blogs = [...Array(105)].map<Blog>((_, index) => ({
 const pageSize = 10;
 
 export default function PageNumber(
-     { pageNumber, totalPages, blogs } :
-     { pageNumber: number, totalPages: number, blogs: Blog[] }
+     { pageNumber, totalPages, blogs, buildTime } :
+     { pageNumber: number, totalPages: number, blogs: Blog[], buildTime: string }
   ) {
   const changeColor = () => {
     if (typeof window !== "undefined") {
@@ -37,6 +37,7 @@ export default function PageNumber(
 
       {/* Page */}
       <h1>Page Number {pageNumber}/{totalPages}</h1>
+      <div>Build: {buildTime}</div>
 
       {blogs.map(blog => (
         <p key={blog.title}>{blog.title} - {blog.content}</p>
@@ -65,21 +66,40 @@ export async function getStaticProps({ params: { pageNumber }}: { params: { page
   const start = (+pageNumber - 1) * pageSize;
   const end = start + pageSize;
   const content = blogs.filter((_, index) => index >= start && index < end);
+  const notFound = !content.length;
+
+  console.log('CALLED');
+
+  await (new Promise((resolve) => {
+    setTimeout(resolve, 5000);
+  }));
 
   return {
-    props: {
+    props: !notFound ? {
         pageNumber: +pageNumber,
         totalPages: Math.ceil(blogs.length / pageSize),
-        blogs: content
-    },
+        blogs: content,
+        buildTime: new Date().toLocaleString(),
+    } : undefined,
+    notFound,
+    revalidate: 120,
   }
 }
 
+const usePaths = false; // for a demo
+
 export async function getStaticPaths() {
-  const paths = [...Array(Math.ceil(blogs.length / pageSize))].map((blog, index) => ({ params: { pageNumber: `${index+1}`}}));
+  if (usePaths) {
+    const paths = [...Array(Math.ceil(blogs.length / pageSize))].map((blog, index) => ({ params: { pageNumber: `${index+1}`}}));
+
+    return {
+      paths,
+      fallback: false
+    }
+  }
 
   return {
-    paths,
-    fallback: false
+    paths: [],
+    fallback: 'blocking'
   };
 }
